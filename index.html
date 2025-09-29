@@ -1,0 +1,474 @@
+  <div id="showAnswerModal" class="modal-bg" style="display:none">
+    <div class="modal fade-in" id="showAnswerModalContent">
+      <h2>Answer Key</h2>
+      <p id="showAnswerMsg">The correct answer is ...</p>
+      <div style="margin-top:18px;display:flex;gap:12px;justify-content:center">
+        <button id="showAnswerQuitBtn">Quit</button>
+        <button id="showAnswerContinueBtn" class="primary">Continue</button>
+      </div>
+    </div>
+  </div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ICT Reviewer — Quiz Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#60a5fa;--muted:#94a3b8;--success:#10b981}
+    *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071028 0%, #0b1220 60%);color:#e6eef8}
+  .fade-in{animation:fadeIn 0.7s}
+  .fade-out{animation:fadeOut 0.5s}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+  @keyframes fadeOut{from{opacity:1;}to{opacity:0;}}
+  .modal-bg{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,36,0.92);z-index:1000;display:flex;align-items:center;justify-content:center;}
+  .modal{background:var(--card);padding:32px 24px;border-radius:16px;box-shadow:0 8px 32px #0008;text-align:center;max-width:340px;}
+  .modal h2{margin-top:0;font-size:1.5em;}
+  .modal p{color:var(--muted);margin:12px 0 20px;}
+  .confetti{position:fixed;pointer-events:none;z-index:2000;top:0;left:0;width:100vw;height:100vh;}
+    .wrap{max-width:920px;margin:28px auto;padding:20px}
+    header{display:flex;gap:16px;align-items:center}
+    h1{margin:0;font-size:20px}
+    .meta{color:var(--muted);font-size:13px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:18px;margin-top:18px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .controls{display:flex;gap:8px;align-items:center}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit;padding:8px 12px;border-radius:8px;cursor:pointer}
+    button.primary{background:var(--accent);border-color:transparent;color:#04203a}
+    .progress{height:10px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#3b82f6);width:0%}
+    .question{font-size:18px;margin:12px 0}
+    .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+    .choice{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);cursor:pointer;min-height:52px;display:flex;align-items:center}
+    .choice.correct{outline:3px solid rgba(16,185,129,0.12);background:rgba(16,185,129,0.06)}
+    .choice.wrong{outline:3px solid rgba(239,68,68,0.12);background:rgba(239,68,68,0.04)}
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+    .small{font-size:13px;color:var(--muted)}
+    .score{font-weight:700}
+    .center{display:flex;align-items:center;gap:8px}
+    .settings{display:flex;gap:8px;align-items:center}
+    .hide{display:none}
+    .answers-list{margin-top:12px}
+    .answers-list li{margin:6px 0;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02)}
+    @media (max-width:640px){.choices{grid-template-columns:1fr}.wrap{padding:12px}}
+  </style>
+</head>
+<body>
+  <div id="welcomeModal" class="modal-bg" style="display:flex">
+    <div class="modal fade-in">
+      <h2>Welcome to ICT Reviewer!</h2>
+      <p>Test your knowledge in ICT, Computers, Web, and more. <br>Try to get the highest score!<br><br><strong>Tip:</strong> Click an option to answer. Use <b>Restart</b> to reset the quiz at any time.</p>
+      <button id="closeModalBtn" class="primary" style="margin-top:10px">Start Quiz</button>
+    </div>
+  </div>
+  <canvas id="confettiCanvas" class="confetti" style="display:none"></canvas>
+  <div id="feedbackModal" class="modal-bg" style="display:none">
+    <div class="modal fade-in" id="feedbackModalContent">
+      <h2 id="feedbackTitle">Correct!</h2>
+      <p id="feedbackMsg">You got it right!</p>
+      <button id="feedbackContinueBtn" class="primary">Continue</button>
+    </div>
+  </div>
+  <audio id="audio-correct" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae6b6.mp3" preload="auto"></audio>
+  <audio id="audio-wrong" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae6b6.mp3" preload="auto"></audio>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>ICT Reviewer — Quiz Game</h1>
+        <div class="meta">60-item multiple choice — Computers, ICT, Web 1.0–3.0, Applications & Impacts</div>
+      </div>
+      <div style="margin-left:auto" class="center">
+        <div class="small">Questions</div>
+        <div id="qCount" style="font-weight:700;margin-left:6px">0/60</div>
+      </div>
+    </header>
+
+    <section class="card" id="gameCard">
+      <div class="topbar">
+        <div class="controls">
+          <button id="startBtn" class="primary">Start Quiz</button>
+          <button id="restartBtn">Restart</button>
+          <div class="settings">
+            <label class="small">Shuffle</label>
+            <input id="shuffleToggle" type="checkbox" checked />
+          </div>
+        </div>
+        <div style="width:48%">
+          <div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
+        </div>
+      </div>
+
+      <div id="quizArea" class="hide">
+        <div class="small">Time left: <span id="timer">--:--</span></div>
+        <div class="question" id="questionText">Question will appear here</div>
+        <div class="choices" id="choices"></div>
+        <div class="footer">
+          <div class="small">Selected: <span id="selected">—</span></div>
+          <div>
+            <button id="nextBtn">Next</button>
+            <button id="showAnswersBtn">Show Answer Key</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="endArea" class="hide">
+        <div style="text-align:center;margin-top:8px">
+          <div class="score" id="finalScore">Score: 0 / 60</div>
+          <div class="small" id="summary">---</div>
+          <div style="margin-top:12px">
+            <button id="reviewAnswersBtn">Review Answers</button>
+            <button id="playAgainBtn" class="primary">Play Again</button>
+          </div>
+          <ul id="answersList" class="answers-list hide"></ul>
+        </div>
+      </div>
+
+    </section>
+
+    <footer style="text-align:center;margin-top:16px;color:var(--muted);font-size:13px">
+      Tip: Click an option to answer. Use <strong>Restart</strong> to reset the quiz at any time.<br>
+  <a id="seeReviewerBtn" href="reviewer.html" target="_blank" style="margin-top:10px;display:inline-block;text-decoration:none"><button>See Reviewer</button></a>
+    </footer>
+
+  <!-- Reviewer modal removed: now opens reviewer.txt in a new tab -->
+  </div>
+
+  <script>
+    // --- INTERACTIVITY & ENGAGEMENT ENHANCEMENTS ---
+    // Confetti animation
+    function launchConfetti() {
+      const canvas = document.getElementById('confettiCanvas');
+      canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+      const ctx = canvas.getContext('2d');
+      let pieces = Array.from({length:120},()=>({
+        x:Math.random()*canvas.width,
+        y:Math.random()*-canvas.height,
+        r:Math.random()*8+4,
+        d:Math.random()*Math.PI*2,
+        c:`hsl(${Math.random()*360},90%,60%)`,
+        s:Math.random()*2+1
+      }));
+      canvas.style.display='block';
+      let t=0;
+      function draw(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        for(const p of pieces){
+          ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,2*Math.PI);
+          ctx.fillStyle=p.c;ctx.fill();
+          p.y+=p.s+Math.sin(t/10+p.d)*1.5;
+          p.x+=Math.sin(t/15+p.d)*2;
+          if(p.y>canvas.height+20) p.y=-10;
+        }
+        t++;
+        if(t<120) requestAnimationFrame(draw); else canvas.style.display='none';
+      }
+      draw();
+    }
+
+    // Modal logic
+    document.addEventListener('DOMContentLoaded',()=>{
+      const modal=document.getElementById('welcomeModal');
+      const closeBtn=document.getElementById('closeModalBtn');
+      closeBtn.onclick=()=>{modal.style.display='none';startBtn.click();};
+    });
+
+    // Sound effects
+    function playSound(type){
+      const audio=document.getElementById(type==='correct'?'audio-correct':'audio-wrong');
+      if(audio){audio.currentTime=0;audio.play();}
+    }
+
+    // Feedback popup logic
+    function showFeedbackPopup(isCorrect, correctLetter, correctText) {
+      const modal = document.getElementById('feedbackModal');
+      const title = document.getElementById('feedbackTitle');
+      const msg = document.getElementById('feedbackMsg');
+      title.textContent = isCorrect ? 'Correct!' : 'Incorrect';
+      msg.innerHTML = isCorrect
+        ? 'You got it right!'
+        : `The correct answer is <b>${correctLetter}</b>: ${correctText}`;
+      modal.style.display = 'flex';
+    }
+    function hideFeedbackPopup() {
+      document.getElementById('feedbackModal').style.display = 'none';
+    }
+    document.addEventListener('DOMContentLoaded',()=>{
+      document.getElementById('feedbackContinueBtn').onclick = function() {
+        hideFeedbackPopup();
+        nextBtn.click();
+      };
+    });
+    const QUESTIONS = [
+      ["Which of the following best defines a computer?",["A) A manual calculating device","B) A programmable electronic device that stores, retrieves, and processes data","C) A machine used only for entertainment","D) A device for communication only"],"B"],
+      ["Which is NOT a principal characteristic of computers?",["A) Can execute a pre-recorded list of instructions","B) Can quickly store and retrieve large data","C) Responds to random actions in an undefined way","D) Responds to a specific set of instructions"],"C"],
+      ["The main function of a computer is to:",["A) Only store data","B) Store, retrieve, and process data","C) Provide entertainment only","D) Connect to the internet only"],"B"],
+      ["Which component is considered the 'brain' of the computer?",["A) RAM","B) CPU","C) Monitor","D) Hard Drive"],"B"],
+      ["Which of the following is a storage device?",["A) Keyboard","B) Hard disk","C) Mouse","D) Monitor"],"B"],
+      ["The temporary memory of a computer is called:",["A) Hard disk","B) RAM","C) ROM","D) Flash drive"],"B"],
+      ["Which is an example of input hardware?",["A) Keyboard","B) Monitor","C) Printer","D) Speaker"],"A"],
+      ["Which is an example of output hardware?",["A) Keyboard","B) Monitor","C) Mouse","D) Scanner"],"B"],
+      ["Software is:",["A) Physical part of a computer","B) A set of programs or instructions that run on hardware","C) External device connected to CPU","D) None of the above"],"B"],
+      ["Which is an example of system software?",["A) Microsoft Word","B) Windows Operating System","C) Photoshop","D) Facebook"],"B"],
+
+      ["ICT stands for:",["A) Information and Communication Technology","B) Integrated Computer Tools","C) Internet and Communication Techniques","D) Intelligent Communication Technology"],"A"],
+      ["Which is the cheapest and fastest means of communication today?",["A) Postal letters","B) Internet-based ICT tools","C) Telephone landlines","D) Fax machines"],"B"],
+      ["Which ICT tool is an example of asynchronous communication?",["A) Chat","B) Email","C) Video call","D) Phone call"],"B"],
+      ["ICT helps students in all EXCEPT:",["A) Critical thinking","B) Collaboration","C) Access to remote learning","D) Avoiding technology"],"D"],
+      ["ICT frees employees from repetitive tasks by:",["A) Creating more paperwork","B) Automating simple activities","C) Limiting communication","D) Removing collaboration"],"B"],
+      ["Which is a modern way of searching for jobs?",["A) Newspaper ads","B) Word of mouth","C) Online job platforms","D) Bulletin boards"],"C"],
+      ["Teachers must be ________ to maximize ICT in education.",["A) Technophobic","B) Digitally literate","C) Resistant to change","D) Traditionalist"],"B"],
+      ["A teaching model where students review lessons online before class is called:",["A) Flipped classroom","B) Static teaching","C) Lecture method","D) Traditional classroom"],"A"],
+      ["Which is NOT a benefit of ICT in education?",["A) Promotes creativity","B) Enhances higher-order thinking","C) Prepares students for digital society","D) Reduces interaction to zero"],"D"],
+      ["An example of mobile learning is:",["A) Online quizzes via smartphones","B) Printed books","C) Blackboard lectures","D) Handwritten notes"],"A"],
+
+      ["Which ICT platform has revolutionized communication and networking?",["A) Newspaper","B) Social media","C) Radio","D) Television"],"B"],
+      ["Facebook, Twitter, YouTube are examples of:",["A) Traditional media","B) Social networking sites","C) Static websites","D) None of the above"],"B"],
+      ["The internet is defined as:",["A) A single computer","B) A global interconnection of networks","C) A stand-alone system","D) A software application"],"B"],
+      ["Blogging and wikis are examples of:",["A) Print media","B) Social media platforms","C) Static websites","D) Web browsers"],"B"],
+      ["One disadvantage of ICT-based socializing is:",["A) Enhancing self-confidence","B) Building professional networks","C) Access to worldwide information","D) Risk of social isolation"],"D"],
+      ["Socialization through ICT helps learners:",["A) Adapt behaviors and beliefs","B) Ignore community interactions","C) Disconnect from society","D) Avoid teamwork"],"A"],
+      ["Which is NOT an example of ICT social media?",["A) LinkedIn","B) Instagram","C) Microsoft Excel","D) Facebook"],"C"],
+      ["An ICT benefit in socializing is:",["A) Restricting access to info","B) Strengthening connections","C) Causing total disconnection","D) Eliminating confidence"],"B"],
+      ["ICT impacts society by providing:",["A) No access to services","B) Vast information and services","C) Isolation only","D) Expensive letters"],"B"],
+      ["A disadvantage of ICT in communication is:",["A) Cost savings","B) Distance learning","C) Reduced personal interaction","D) Fast access to information"],"C"],
+
+      ["One positive impact of ICT on education is:",["A) Eliminating teachers","B) Distance learning and e-learning","C) Limiting learning access","D) Increasing travel needs"],"B"],
+      ["ICT helps disabled people through:",["A) Printed books","B) Assistive technologies","C) Typewriters","D) None of the above"],"B"],
+      ["Which is a negative impact of ICT on jobs?",["A) Creates new online jobs","B) Automates repetitive work","C) Job losses due to automation","D) Improves efficiency"],"C"],
+      ["ICT promotes global communication through:",["A) Postal services","B) Video calls, email, e-commerce","C) Manual typewriters","D) Traditional offices only"],"B"],
+      ["ICT helps manage information through:",["A) Data mining and stock control","B) Handwritten logs","C) Traditional letters","D) Phone calls"],"A"],
+      ["Which is a health risk from ICT?",["A) Fitness apps","B) Reduced physical activity","C) Active teamwork","D) Exercise promotion"],"B"],
+      ["Which is an example of ICT reducing costs?",["A) Email communication","B) Printed letters","C) Air mail","D) Telephone operators"],"A"],
+      ["A disadvantage for small organizations in ICT is:",["A) More opportunities","B) Stronger competition with larger firms","C) Better info access","D) Easier marketing"],"B"],
+      ["ICT in education can use Virtual Reality for:",["A) Distance learning simulations","B) Printing books","C) Manual note-taking","D) Physical bulletin boards"],"A"],
+      ["ICT is costly because of:",["A) Training, hardware, software","B) Free internet","C) Free applications","D) Easy access"],"A"],
+
+      ["Web 1.0 is also called:",["A) Read-write web","B) Read-only web","C) Semantic web","D) Interactive web"],"B"],
+      ["Web 1.0 websites were mostly:",["A) User-generated","B) Static pages","C) Social platforms","D) Mobile-friendly"],"B"],
+      ["Example of Web 1.0 site:",["A) Company homepage","B) Facebook","C) Wikipedia","D) YouTube"],"A"],
+      ["Web 2.0 emphasizes:",["A) Static content","B) User participation","C) Non-interaction","D) Single access"],"B"],
+      ["Example of Web 2.0:",["A) Blogging","B) Online forums","C) Social networking sites","D) All of the above"],"D"],
+      ["A hallmark of Web 2.0 is:",["A) User tagging","B) Data silos","C) Non-interactivity","D) Lack of standards"],"A"],
+      ["Web 3.0 is also called:",["A) Static web","B) Intelligent semantic web","C) Read-only web","D) Social web"],"B"],
+      ["Web 3.0 introduces:",["A) AI and machine learning","B) Simple static pages","C) Limited interaction","D) No user control"],"A"],
+      ["Semantic web focuses on:",["A) Human-only interaction","B) Understanding meaning of information","C) Just hyperlinks","D) Static files"],"B"],
+      ["Which is an example of Web 3.0 feature?",["A) Personalized recommendations","B) Company homepage","C) Guestbooks","D) Bulletin boards"],"A"],
+      ["Which web version focused on company websites only?",["A) Web 1.0","B) Web 2.0","C) Web 3.0","D) None"],"A"],
+      ["Social networks belong to:",["A) Web 1.0","B) Web 2.0","C) Web 3.0","D) None"],"B"],
+      ["Artificial Intelligence is a key part of:",["A) Web 1.0","B) Web 2.0","C) Web 3.0","D) None"],"C"],
+      ["Blogging started in:",["A) Web 1.0","B) Web 2.0","C) Web 3.0","D) None"],"B"],
+      ["LinkedIn is part of:",["A) Web 1.0","B) Web 2.0","C) Web 3.0","D) None"],"B"],
+      ["A website showing static information only is:",["A) Web 1.0","B) Web 2.0","C) Web 3.0","D) None"],"A"],
+      ["A platform using machine learning for smart search belongs to:",["A) Web 1.0","B) Web 2.0","C) Web 3.0","D) None"],"C"],
+      ["Wikipedia, where users can edit, is:",["A) Web 1.0","B) Web 2.0","C) Web 3.0","D) None"],"B"],
+      ["Which web type integrates voice assistants like Siri and Alexa?",["A) Web 1.0","B) Web 2.0","C) Web 3.0","D) None"],"C"],
+      ["The main difference of Web 3.0 from Web 2.0 is:",["A) Static content","B) Semantic and intelligent systems","C) Lack of interaction","D) Company-only sites"],"B"],
+    ];
+
+    // State
+    let pool = [];
+    let currentIndex = 0;
+    let score = 0;
+    const TOTAL = QUESTIONS.length;
+    const TIME_PER_QUIZ = 15 * 60; // 15 mins default
+    let timeLeft = TIME_PER_QUIZ;
+    let timerInterval = null;
+
+    // DOM
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const quizArea = document.getElementById('quizArea');
+    const endArea = document.getElementById('endArea');
+    const questionText = document.getElementById('questionText');
+    const choicesEl = document.getElementById('choices');
+    const nextBtn = document.getElementById('nextBtn');
+    const selectedEl = document.getElementById('selected');
+    const qCount = document.getElementById('qCount');
+    const progressBar = document.getElementById('progressBar');
+    const timerEl = document.getElementById('timer');
+    const finalScore = document.getElementById('finalScore');
+    const summary = document.getElementById('summary');
+    const answersList = document.getElementById('answersList');
+    const reviewAnswersBtn = document.getElementById('reviewAnswersBtn');
+    const playAgainBtn = document.getElementById('playAgainBtn');
+    const showAnswersBtn = document.getElementById('showAnswersBtn');
+
+    function formatTime(sec){
+      const m = Math.floor(sec/60).toString().padStart(2,'0');
+      const s = (sec%60).toString().padStart(2,'0');
+      return `${m}:${s}`;
+    }
+
+    function startTimer(){
+      clearInterval(timerInterval);
+      timerInterval = setInterval(()=>{
+        timeLeft--;
+        timerEl.textContent = formatTime(timeLeft);
+        if(timeLeft<=0){
+          clearInterval(timerInterval);
+          endQuiz();
+        }
+      },1000);
+    }
+
+    function shuffleArray(a){
+      for(let i=a.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];
+      }
+      return a;
+    }
+
+    function preparePool(){
+      pool = QUESTIONS.map((q,i)=>({idx:i, text:q[0], opts:q[1].slice(), ans:q[2]}));
+      if(document.getElementById('shuffleToggle').checked) pool = shuffleArray(pool);
+      currentIndex = 0; score = 0; timeLeft = TIME_PER_QUIZ;
+      qCount.textContent = `${currentIndex}/${TOTAL}`;
+      progressBar.style.width = `0%`;
+    }
+
+    function renderQuestion(){
+      const item = pool[currentIndex];
+      questionText.textContent = item.text;
+      choicesEl.innerHTML = '';
+      selectedEl.textContent = '—';
+      // Fade in effect
+      questionText.classList.remove('fade-in');
+      void questionText.offsetWidth; // trigger reflow
+      questionText.classList.add('fade-in');
+      // Randomize options order
+      let opts = item.opts.slice();
+      opts = shuffleArray(opts);
+      opts.forEach(optText=>{
+        const btn = document.createElement('div');
+        btn.className = 'choice fade-in';
+        btn.tabIndex = 0;
+        btn.innerText = optText;
+        btn.addEventListener('click',()=>selectChoice(btn, optText));
+        btn.addEventListener('keypress',(e)=>{if(e.key==='Enter') selectChoice(btn,optText)});
+        choicesEl.appendChild(btn);
+      });
+      qCount.textContent = `${currentIndex+1}/${TOTAL}`;
+      const pct = Math.round((currentIndex)/TOTAL*100);
+      progressBar.style.width = pct + '%';
+    }
+
+    let answered = false;
+    function selectChoice(el, optText){
+      if(answered) return;
+      answered = true;
+      // determine letter from option string 'A) Blah'
+      const letter = optText.trim().charAt(0).toUpperCase();
+      selectedEl.textContent = letter;
+      const correct = pool[currentIndex].ans;
+      // mark choices
+      const children = Array.from(choicesEl.children);
+      let correctText = '';
+      children.forEach(c=>{
+        const l = c.innerText.trim().charAt(0).toUpperCase();
+        if(l===correct) {
+          c.classList.add('correct');
+          correctText = c.innerText.substring(3); // skip 'A) '
+        }
+        if(l===letter && l!==correct) c.classList.add('wrong');
+      });
+      let isCorrect = (letter===correct);
+      if(isCorrect){
+        score++;
+        playSound('correct');
+      }else{
+        playSound('wrong');
+      }
+      showFeedbackPopup(isCorrect, correct, correctText);
+    }
+
+    nextBtn.addEventListener('click',()=>{
+      // move to next
+      if(!answered){
+        // if not answered, treat as incorrect and continue
+        answered = true;
+      }
+      currentIndex++;
+      answered = false;
+      if(currentIndex>=TOTAL){
+        endQuiz();
+        return;
+      }
+      renderQuestion();
+    });
+
+    function endQuiz(){
+      clearInterval(timerInterval);
+      quizArea.classList.add('hide');
+      endArea.classList.remove('hide');
+      finalScore.textContent = `Score: ${score} / ${TOTAL}`;
+      const pct = Math.round((score/TOTAL)*100);
+      summary.textContent = `You scored ${pct}% — ${score} out of ${TOTAL}.`;
+      // build answers list
+      answersList.innerHTML = '';
+      QUESTIONS.forEach((q,i)=>{
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>Q${i+1}.</strong> ${q[0]}<br><em>Correct: ${q[2]}</em>`;
+        answersList.appendChild(li);
+      });
+      launchConfetti();
+    }
+
+    // Controls
+    startBtn.addEventListener('click',()=>{
+      preparePool();
+      quizArea.classList.remove('hide');
+      endArea.classList.add('hide');
+      renderQuestion();
+      startTimer();
+    });
+    restartBtn.addEventListener('click',()=>{
+      preparePool();
+      if(!quizArea.classList.contains('hide')) renderQuestion();
+    });
+
+    reviewAnswersBtn.addEventListener('click',()=>{
+      answersList.classList.toggle('hide');
+    });
+    playAgainBtn.addEventListener('click',()=>{
+      preparePool();
+      quizArea.classList.remove('hide');
+      endArea.classList.add('hide');
+      renderQuestion();
+      startTimer();
+    });
+
+    // Show Answer modal logic
+    function showAnswerModal() {
+      const item = pool[currentIndex];
+      const correct = item.ans;
+      const correctOpt = item.opts.find(opt => opt.trim().charAt(0).toUpperCase() === correct);
+      const correctText = correctOpt ? correctOpt.substring(3) : '';
+      document.getElementById('showAnswerMsg').innerHTML = `The correct answer is <b>${correct}</b>: ${correctText}`;
+      document.getElementById('showAnswerModal').style.display = 'flex';
+    }
+    function hideAnswerModal() {
+      document.getElementById('showAnswerModal').style.display = 'none';
+    }
+    document.addEventListener('DOMContentLoaded',()=>{
+      document.getElementById('showAnswerQuitBtn').onclick = function() {
+        hideAnswerModal();
+        endQuiz();
+      };
+      document.getElementById('showAnswerContinueBtn').onclick = function() {
+        hideAnswerModal();
+      };
+    });
+    showAnswersBtn.addEventListener('click',()=>{
+      showAnswerModal();
+    });
+
+    // initialize
+    preparePool();
+    timerEl.textContent = formatTime(timeLeft);
+  </script>
+</body>
+</html>
